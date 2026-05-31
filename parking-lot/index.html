@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parking Lot LLD - インタラクティブ・ハンズオン・シミュレーター</title>
+    <meta name="description" content="Googleの低レベル設計（LLD）面接対策のためのParking Lot（駐車場システム）の日本語解説付きインタラクティブ・シミュレーターです。">
+    <!-- Google Fonts: Inter & Outfit for modern high-end look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar">
+            <div class="brand-container">
+                <i class="fa-solid fa-square-parking brand-logo"></i>
+                <div class="brand-text">
+                    <h1>Parking Lot LLD</h1>
+                    <span>Google LLD Interview Prep</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <button class="nav-btn active" data-tab="simulator">
+                    <i class="fa-solid fa-gauge-high"></i>
+                    <span>シミュレーター</span>
+                </button>
+                <button class="nav-btn" data-tab="concurrency">
+                    <i class="fa-solid fa-bolt-lightning"></i>
+                    <span>並行処理検証</span>
+                </button>
+                <button class="nav-btn" data-tab="architecture">
+                    <i class="fa-solid fa-sitemap"></i>
+                    <span>LLD 設計論</span>
+                </button>
+                <button class="nav-btn" data-tab="quiz">
+                    <i class="fa-solid fa-clipboard-question"></i>
+                    <span>模擬面接クイズ</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="status-badge">
+                    <span class="status-dot green"></span>
+                    <span>Java Backend Ready</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-title">
+                    <h2 id="tab-title">駐車場シミュレーター</h2>
+                    <p id="tab-subtitle">3フロア構成のリアルタイム満空管理・チケット発行・料金精算の検証</p>
+                </div>
+                <div class="header-actions">
+                    <div class="time-controller">
+                        <i class="fa-regular fa-clock"></i>
+                        <span id="sim-time-display">00:00:00</span>
+                        <div class="time-badge">模擬時間加速中</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Tab Container -->
+            <div class="tab-content-wrapper">
+                
+                <!-- 1. SIMULATOR TAB -->
+                <section class="tab-panel active" id="tab-simulator">
+                    <div class="simulator-layout">
+                        <!-- Left Panel: Controls -->
+                        <div class="control-panel">
+                            <div class="card glass-card">
+                                <h3><i class="fa-solid fa-car-tunnel"></i> 車両の入庫 (enter)</h3>
+                                <div class="form-group">
+                                    <label>1. 車種を選択 (VehicleType)</label>
+                                    <div class="vehicle-selector">
+                                        <input type="radio" name="vehicle-type" id="v-moto" value="MOTORCYCLE">
+                                        <label for="v-moto" class="vehicle-option-label">
+                                            <i class="fa-solid fa-motorcycle"></i>
+                                            <span>Motorcycle</span>
+                                        </label>
+                                        
+                                        <input type="radio" name="vehicle-type" id="v-car" value="CAR" checked>
+                                        <label for="v-car" class="vehicle-option-label">
+                                            <i class="fa-solid fa-car"></i>
+                                            <span>Car</span>
+                                        </label>
+                                        
+                                        <input type="radio" name="vehicle-type" id="v-large" value="LARGE">
+                                        <label for="v-large" class="vehicle-option-label">
+                                            <i class="fa-solid fa-truck-pickup"></i>
+                                            <span>Large</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>2. 入口ゲートを選択</label>
+                                    <select id="entrance-gate-select" class="custom-select">
+                                        <option value="Gate A">Gate A (西側ゲート)</option>
+                                        <option value="Gate B">Gate B (北側ゲート)</option>
+                                        <option value="Gate C">Gate C (東側ゲート)</option>
+                                    </select>
+                                </div>
+                                <button id="btn-enter-lot" class="btn btn-primary btn-block">
+                                    <i class="fa-solid fa-ticket"></i> 入庫実行 (enter)
+                                </button>
+                                <div id="entry-feedback" class="action-feedback"></div>
+                            </div>
+
+                            <div class="card glass-card mt-4">
+                                <h3><i class="fa-solid fa-gears"></i> 設定 & システム調整</h3>
+                                <div class="form-group">
+                                    <label>料金計算戦略 (PricingStrategy)</label>
+                                    <div class="pricing-strategy-selector">
+                                        <div class="strategy-option">
+                                            <input type="radio" name="pricing-strategy" id="ps-default" value="DEFAULT" checked>
+                                            <label for="ps-default">
+                                                <strong>DefaultPricingStrategy</strong>
+                                                <span class="strategy-desc">均一料金: $5.00/時 (端数切り上げ)</span>
+                                            </label>
+                                        </div>
+                                        <div class="strategy-option">
+                                            <input type="radio" name="pricing-strategy" id="ps-vehicle" value="VEHICLE">
+                                            <label for="ps-vehicle">
+                                                <strong>VehicleTypePricingStrategy</strong>
+                                                <span class="strategy-desc">車種別倍率: 二輪 0.6x | 乗用車 1.0x | 大型 1.5x</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>時間経過速度 (Time Acceleration)</label>
+                                    <div class="range-slider-wrapper">
+                                        <input type="range" id="time-speed-slider" min="1" max="120" value="30">
+                                        <div class="slider-labels">
+                                            <span>標準</span>
+                                            <span id="speed-indicator">1秒 ＝ 30分</span>
+                                            <span>高速</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Visual Lot View -->
+                        <div class="visual-panel">
+                            <div class="card glass-card min-h-card">
+                                <div class="card-header-flex">
+                                    <h3><i class="fa-solid fa-map-location-dot"></i> 駐車場フロアマップ (Parking Spots)</h3>
+                                    <div class="floor-tab-group">
+                                        <button class="floor-tab-btn active" data-floor="1">1F <span class="badge">二輪・乗用車</span></button>
+                                        <button class="floor-tab-btn" data-floor="2">2F <span class="badge">乗用車</span></button>
+                                        <button class="floor-tab-btn" data-floor="3">3F <span class="badge">大型車専用</span></button>
+                                    </div>
+                                </div>
+
+                                <div class="floor-visual-container">
+                                    <!-- Dynamic Floor Layout -->
+                                    <div class="parking-grid" id="parking-grid-view">
+                                        <!-- Spots will be dynamically generated by JS -->
+                                    </div>
+                                </div>
+
+                                <div class="lot-legend">
+                                    <div class="legend-item"><span class="legend-box empty"></span> <span>空きスペース</span></div>
+                                    <div class="legend-item"><span class="legend-box occupied motorcycle"></span> <span>二輪駐車中 (Motorcycle)</span></div>
+                                    <div class="legend-item"><span class="legend-box occupied car"></span> <span>乗用車駐車中 (Car)</span></div>
+                                    <div class="legend-item"><span class="legend-box occupied large"></span> <span>大型車駐車中 (Large)</span></div>
+                                </div>
+                            </div>
+
+                            <!-- Active Tickets / Exit Panel -->
+                            <div class="card glass-card mt-4">
+                                <h3><i class="fa-solid fa-receipt"></i> アクティブチケット一覧 (Active Tickets & Exit)</h3>
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>チケットID</th>
+                                                <th>スポットID</th>
+                                                <th>車種</th>
+                                                <th>入車時刻</th>
+                                                <th>滞在時間</th>
+                                                <th>現在料金</th>
+                                                <th>出庫 (exit)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="active-tickets-list">
+                                            <!-- Dynamic Rows -->
+                                            <tr class="empty-state-row">
+                                                <td colspan="7" class="text-center text-muted">
+                                                    現在駐車中の車両はありません。左側のパネルから入庫してください。
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. CONCURRENCY PLAYGROUND TAB -->
+                <section class="tab-panel" id="tab-concurrency">
+                    <div class="concurrency-layout">
+                        <div class="concurrency-info card glass-card">
+                            <h3><i class="fa-solid fa-triangle-exclamation"></i> マルチ入口のレースコンディション検証</h3>
+                            <p>
+                                実際の駐車場システムでは、複数のゲート（入口）から同時に車両が入庫を試みることがあります。
+                                適切な排他制御（Javaでの <code>ReentrantLock</code> または <code>synchronized</code>）を行わないと、
+                                <strong>「2台の車両が同時に1つの同じ駐車スポットを確保し、別々のチケットで割り当てられる」</strong>というレースコンディション重大障害が発生します。
+                            </p>
+                            
+                            <div class="alert-info-box mt-3">
+                                <strong>💡 このシミュレーターで検証できること:</strong>
+                                <ul>
+                                    <li>空き枠が<strong>「残り1つ」</strong>の過酷な条件下で、3つのゲートから同時にCarが入庫したケース。</li>
+                                    <li><strong>排他ロックなし (No Lock)</strong>: スレッドが「空き枠検索」と「確保(occupied)」を順序なく交互に実行するため、重複割り当てエラーが発生する様子を視覚化。</li>
+                                    <li><strong>排他ロックあり (ReentrantLock)</strong>: 1つのゲートがロックを保持している間、他のゲートのスレッドは待機し、安全に拒否されるフロー。</li>
+                                </ul>
+                            </div>
+
+                            <div class="concurrency-controls-row mt-4">
+                                <div class="toggle-lock-wrapper">
+                                    <label class="switch">
+                                        <input type="checkbox" id="concurrency-lock-toggle" checked>
+                                        <span class="slider round"></span>
+                                    </label>
+                                    <div class="lock-status-text">
+                                        <strong id="lock-state-label">排他制御 (ReentrantLock) : 有効</strong>
+                                        <span id="lock-state-desc" class="text-emerald">スレッド排他実行によりレースコンディションを防止します</span>
+                                    </div>
+                                </div>
+                                <button id="btn-run-race" class="btn btn-warning">
+                                    <i class="fa-solid fa-play"></i> 同時入庫シミュレーション実行
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Visualization Area -->
+                        <div class="concurrency-viz-row">
+                            <div class="viz-column card glass-card">
+                                <h4><i class="fa-solid fa-users-rectangle"></i> スレッド実行ステップ</h4>
+                                <div class="thread-visualizer">
+                                    <!-- Gate A Thread -->
+                                    <div class="thread-node" id="node-gate-a">
+                                        <div class="thread-header">
+                                            <span class="thread-badge">Gate A Thread</span>
+                                            <span class="thread-status" id="status-gate-a">IDLE</span>
+                                        </div>
+                                        <div class="thread-step-list">
+                                            <div class="step" data-step="1">1. 空き枠検索 (findSpot)</div>
+                                            <div class="step" data-step="2">2. スポットの確保 (occupiedSpotIds.add)</div>
+                                            <div class="step" data-step="3">3. チケット生成 & 返却 (createTicket)</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Gate B Thread -->
+                                    <div class="thread-node" id="node-gate-b">
+                                        <div class="thread-header">
+                                            <span class="thread-badge">Gate B Thread</span>
+                                            <span class="thread-status" id="status-gate-b">IDLE</span>
+                                        </div>
+                                        <div class="thread-step-list">
+                                            <div class="step" data-step="1">1. 空き枠検索 (findSpot)</div>
+                                            <div class="step" data-step="2">2. スポットの確保 (occupiedSpotIds.add)</div>
+                                            <div class="step" data-step="3">3. チケット生成 & 返却 (createTicket)</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Gate C Thread -->
+                                    <div class="thread-node" id="node-gate-c">
+                                        <div class="thread-header">
+                                            <span class="thread-badge">Gate C Thread</span>
+                                            <span class="thread-status" id="status-gate-c">IDLE</span>
+                                        </div>
+                                        <div class="thread-step-list">
+                                            <div class="step" data-step="1">1. 空き枠検索 (findSpot)</div>
+                                            <div class="step" data-step="2">2. スポットの確保 (occupiedSpotIds.add)</div>
+                                            <div class="step" data-step="3">3. チケット生成 & 返却 (createTicket)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="viz-column card glass-card">
+                                <h4><i class="fa-solid fa-list-check"></i> シミュレーション・コンソールログ</h4>
+                                <div class="terminal-view" id="concurrency-terminal">
+                                    <div class="terminal-line system-line">[SYSTEM] スレッドシミュレータが起動しました。</div>
+                                    <div class="terminal-line system-line">[SYSTEM] 条件: 駐車場内に空車スペースは「残り1つ(C1)」のみ。</div>
+                                    <div class="terminal-line system-line">[SYSTEM] 同時入庫実行ボタンを押してください。</div>
+                                </div>
+                                <div class="simulation-spot-status-box mt-3" id="target-spot-box">
+                                    <span>検証スポット: <strong>C1 (CAR)</strong></span>
+                                    <span class="spot-status-tag free" id="target-spot-badge">FREE</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. LLD ARCHITECTURE TAB -->
+                <section class="tab-panel" id="tab-architecture">
+                    <div class="architecture-layout">
+                        <!-- Key Design Cards (Japanese with English LLD concepts) -->
+                        <div class="arch-section-header">
+                            <h3><i class="fa-solid fa-graduation-cap"></i> Google 面接で差がつく LLD 設計選択とトレードオフ</h3>
+                            <p>この駐車場設計において、面接官が厳密に評価する設計判断とトレードオフを日本語で明文化して解説します。</p>
+                        </div>
+
+                        <div class="arch-cards-grid">
+                            <div class="arch-card">
+                                <div class="arch-card-icon"><i class="fa-solid fa-ban"></i></div>
+                                <h4>Vehicle はクラスにしない</h4>
+                                <p class="badge-tag relational">Design Decision</p>
+                                <p class="arch-card-desc">
+                                    一番やりがちなミスは、<code>Vehicle</code> クラス（および子クラスの <code>Car</code> など）を作ってしまうことです。
+                                    車両は本システムにとって「外部存在」であり、システム内でその状態を変化・追跡する必要はありません。
+                                    必要なのは「スポットを一致させるための車種ラベル」だけです。よって、クラスではなく単なる <strong>Enum</strong> で定義するのがベストです。
+                                    「名詞をすべてクラス化しない」という判断が、LLD面接官に強くアピールします。
+                                </p>
+                            </div>
+
+                            <div class="arch-card">
+                                <div class="arch-card-icon"><i class="fa-solid fa-right-left"></i></div>
+                                <h4>物理状態 vs 関係状態 (Intrinsic vs Relational)</h4>
+                                <p class="badge-tag relational">State Isolation</p>
+                                <p class="arch-card-desc">
+                                    <code>ParkingSpot</code> の状態分離の設計判断です：
+                                    <br><strong>・Intrinsic (固有物理状態)</strong>: スポットIDやサイズはスポット自身が持ちます (<code>id</code>, <code>spotType</code>)。
+                                    <br><strong>・Relational (関係状態)</strong>: 「チケット割り当て中か」はオーケストレーター <code>ParkingLot</code> の `occupiedSpotIds` Set で管理します。
+                                    これらを分離し ParkingLot に集約させることで、オブジェクト間の循環参照や整合性エラーを防ぎ、同時並行処理でのスレッド同期を極めてシンプルかつ堅牢に解決可能にします。
+                                </p>
+                            </div>
+
+                            <div class="arch-card">
+                                <div class="arch-card-icon"><i class="fa-solid fa-coins"></i></div>
+                                <h4>お金は必ず Long Cents（整数）で管理</h4>
+                                <p class="badge-tag precision">Data Integrity</p>
+                                <p class="arch-card-desc">
+                                    料金計算で <code>float</code> や <code>double</code> を絶対に用いてはいけません。
+                                    コンピューター内部の2進数表現の限界により、<code>0.1</code> などの小数は厳密に表現できず、計算が重なることで微小な誤差が累積します。
+                                    金融系を扱うシステムとしてのプロフェッショナルな姿勢を示すため、金額はすべて最小単位（ドルなら「セント」、円なら「円」）の <strong><code>long</code> / 整数</strong> で取り扱います。
+                                </p>
+                            </div>
+
+                            <div class="arch-card">
+                                <div class="arch-card-icon"><i class="fa-solid fa-code-fork"></i></div>
+                                <h4>料金計算は Strategy パターンで拡張</h4>
+                                <p class="badge-tag patterns">Design Patterns</p>
+                                <p class="arch-card-desc">
+                                    料金計算ロジック（単一時間、車種別、曜日・夜間割引など）を <code>ParkingLot</code> 自体に書くと、要件追加のたびに大本のクラスを変更する必要があり、<strong>単一責任原則（SRP）</strong>および<strong>開閉原則（OCP）</strong>に違反します。
+                                    これを解決するために <code>PricingStrategy</code> インターフェースを定義し、計算ロジックをクラスとしてカプセル化して依存注入できるようにします。
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- UML Diagram -->
+                        <div class="card glass-card mt-4">
+                            <h3><i class="fa-solid fa-diagram-project"></i> クラス相関関係・オブジェクト構造</h3>
+                            <div class="uml-diagram-container">
+                                <div class="uml-node orchestrator">
+                                    <div class="uml-node-title">ParkingLot (オーケストレーター)</div>
+                                    <div class="uml-node-body">
+                                        - spots: List&lt;ParkingSpot&gt;<br>
+                                        - occupiedSpotIds: Set&lt;String&gt;<br>
+                                        - activeTickets: Map&lt;String, Ticket&gt;<br>
+                                        - lock: ReentrantLock<br>
+                                        <hr>
+                                        + enter(VehicleType) -> Ticket<br>
+                                        + exit(String) -> long
+                                    </div>
+                                </div>
+                                <div class="uml-arrow"><i class="fa-solid fa-arrow-right"></i> owns</div>
+                                <div class="uml-node entity">
+                                    <div class="uml-node-title">ParkingSpot (エンティティ)</div>
+                                    <div class="uml-node-body">
+                                        - id: String<br>
+                                        - spotType: SpotType<br>
+                                        <hr>
+                                        + getId() -> String<br>
+                                        + getSpotType() -> SpotType
+                                    </div>
+                                </div>
+                                <div class="uml-arrow"><i class="fa-solid fa-arrow-right"></i> creates</div>
+                                <div class="uml-node value-object">
+                                    <div class="uml-node-title">Ticket (バリューオブジェクト)</div>
+                                    <div class="uml-node-body">
+                                        - id: String<br>
+                                        - spotId: String<br>
+                                        - vehicleType: VehicleType<br>
+                                        - entryTimeMs: long<br>
+                                        <hr>
+                                        + getId() -> String<br>
+                                        + getSpotId() -> String
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Code Viewer -->
+                        <div class="card glass-card mt-4">
+                            <div class="card-header-flex">
+                                <h3><i class="fa-brands fa-java"></i> Java ソースコード・エクスプローラー</h3>
+                                <div class="code-tab-group" id="code-tabs">
+                                    <button class="code-tab-btn active" data-file="ParkingLot">ParkingLot.java</button>
+                                    <button class="code-tab-btn" data-file="ParkingSpot">ParkingSpot.java</button>
+                                    <button class="code-tab-btn" data-file="Ticket">Ticket.java</button>
+                                    <button class="code-tab-btn" data-file="PricingStrategy">PricingStrategy.java</button>
+                                    <button class="code-tab-btn" data-file="ParkingLotTest">ParkingLotTest.java</button>
+                                </div>
+                            </div>
+                            <div class="code-viewer-container">
+                                <pre><code id="code-display-block" class="language-java">// Code will load here</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. INTERVIEW QUIZ TAB -->
+                <section class="tab-panel" id="tab-quiz">
+                    <div class="quiz-layout">
+                        <div class="quiz-progress-wrapper card glass-card">
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" id="quiz-progress-bar" style="width: 0%"></div>
+                            </div>
+                            <div class="progress-text">
+                                質問: <span id="current-question-num">1</span> / <span id="total-questions-num">6</span>
+                                <span class="score-display" style="float: right;">正解数: <span id="correct-score">0</span></span>
+                            </div>
+                        </div>
+
+                        <!-- Active Question Card -->
+                        <div class="quiz-card-wrapper">
+                            <div class="card glass-card" id="quiz-question-card">
+                                <h3 id="quiz-question-title">質問文がロードされます...</h3>
+                                <div class="quiz-options-list" id="quiz-options-container">
+                                    <!-- Dynamic Options -->
+                                </div>
+                                <div class="quiz-explanation-box hidden" id="quiz-explanation">
+                                    <div class="explanation-status"></div>
+                                    <p class="explanation-text"></p>
+                                    <button id="btn-next-question" class="btn btn-primary mt-3">次の質問へ</button>
+                                </div>
+                            </div>
+
+                            <!-- Results Screen (Hidden initially) -->
+                            <div class="card glass-card text-center hidden" id="quiz-result-card">
+                                <i class="fa-solid fa-trophy trophy-icon"></i>
+                                <h2>クイズ終了！</h2>
+                                <p class="quiz-score-summary mt-3">あなたのスコアは <strong id="final-score">0</strong> / <strong id="final-total">6</strong> 点でした。</p>
+                                <p class="quiz-feedback-msg text-muted mt-2" id="quiz-feedback-text">素晴らしい設計理解度です！Google面接に向けて自信を持ちましょう。</p>
+                                <button id="btn-restart-quiz" class="btn btn-secondary mt-4">
+                                    <i class="fa-solid fa-rotate-left"></i> クイズに再挑戦する
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- JS dependencies -->
+    <script src="app.js"></script>
+</body>
+</html>

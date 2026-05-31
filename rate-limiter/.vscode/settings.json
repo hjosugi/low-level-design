@@ -1,0 +1,26 @@
+{
+    "extensions.experimental.affinity": {
+        "asvetliakov.vscode-neovim": 1
+    },
+    "workbench.colorTheme": "Kanagawa Wave",
+    "workbench.sideBar.location": "right",
+    "workbench.iconTheme": "material-icon-theme",
+    "editor.fontFamily": "'FirgeNerd Console', monospace",
+    "editor.fontSize": 13,
+    "editor.minimap.enabled": false,
+    "editor.stickyScroll.enabled": false,
+    "terminal.integrated.stickyScroll.enabled": false,
+    "notebook.stickyScroll.enabled": false,
+    "workbench.tree.enableStickyScroll": false,
+    
+    // Java Extension Configuration using mise JDK path
+    "java.jdt.ls.java.home": "/home/hsugi/.local/share/mise/installs/java/21.0.2",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "/home/hsugi/.local/share/mise/installs/java/21.0.2",
+            "default": true
+        }
+    ],
+    "java.compile.nullAnalysis.mode": "automatic"
+}

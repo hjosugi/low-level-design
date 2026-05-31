@@ -1,0 +1,23 @@
+# Java compiled files
+bin/
+*.class
+
+# Log files
+*.log
+app.log
+temp_concurrency.log
+
+# System/OS files
+.DS_Store
+Thumbs.db
+
+# VSCode local settings that are workspace specific but we want to keep them.
+# Usually, we exclude workspace-specific settings that change per-developer,
+# but we have backed them up properly. Let's exclude any local workspace cache.
+.vscode/ipch/
+.vscode/.suo
+.vscode/*.user
+.vscode/*.userossc
+.vscode/*.sln
+.vscode/*.suo
+.vscode/*.gemini

@@ -1,0 +1,60 @@
+# ==========================================================================
+# Rate Limiter LLD - Git Ignore Configurations
+# ==========================================================================
+
+# --- Java Compilation Artifacts ---
+# コンパイル済みのクラスファイル、ビルド成果物、パッケージを対象外にします
+*.class
+*.log
+*.ctxt
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# --- Compilation Output Directories ---
+# コンパイル出力先フォルダ（bin や out 等）を対象外にします
+bin/
+out/
+target/
+build/
+.gradle/
+.settings/
+.classpath
+.project
+
+# --- OS System Files ---
+# オペレーティングシステムが自動生成する一時ファイルを対象外にします
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- JetBrains IDEs (IntelliJ, etc.) ---
+# IntelliJ などの自動生成ファイルを対象外にします
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# --- Node.js / Web Assets Dependencies ---
+# フロントエンド開発時のパッケージやログファイルを対象外にします
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.eslintcache
+
+# --- Custom VS Code configuration preservation ---
+# VS Code の設定やワークスペースは意図的に追跡対象に含めるため、以下は除外【しません】
+# - .vscode/settings.json (インポート済の Java JDK パス等)
+# - .vscode/keybindings.json (インポート済のキーバインド等)
+# - parking-lot.code-workspace (ワークスペース定義)

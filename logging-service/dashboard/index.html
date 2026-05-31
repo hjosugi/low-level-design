@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高並行・高拡張スレッドセーフ・ロギングサービス可視化</title>
+    <!-- Google Fonts: Outfit & Fira Code for terminals -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Premium Glowing Background Elements -->
+    <div class="glow-bg glow-primary"></div>
+    <div class="glow-bg glow-secondary"></div>
+
+    <div class="dashboard-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-logo">
+                <span class="logo-icon">⚡</span>
+                <div class="logo-text">
+                    <h1>LoggingService<span>.java</span></h1>
+                    <p>高並行スレッドセーフ・インプロセス・ロガー可視化システム</p>
+                </div>
+            </div>
+            <div class="system-status">
+                <div class="status-indicator">
+                    <span class="pulse-dot"></span>
+                    <span id="connection-status">接続中...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- TOP LEVEL METRICS -->
+        <section class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon" style="color: var(--info-color);">📊</div>
+                <div class="metric-info">
+                    <h3>総ログエミット数</h3>
+                    <p id="metric-total-logs">0</p>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon" style="color: var(--success-color);">⚙️</div>
+                <div class="metric-info">
+                    <h3>アクティブシミュレーションスレッド</h3>
+                    <p id="metric-active-threads">0</p>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon" style="color: var(--warn-color);">⏳</div>
+                <div class="metric-info">
+                    <h3>ブロックされたスレッド数</h3>
+                    <p id="metric-blocked-threads">0</p>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon" style="color: var(--error-color);">❌</div>
+                <div class="metric-info">
+                    <h3>破棄（Drop）ログ数</h3>
+                    <p id="metric-dropped-logs">0</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- MAIN LAYOUT -->
+        <div class="main-layout">
+            <!-- COLUMN 1: CONFIGURATION & SIMULATION -->
+            <aside class="sidebar-column">
+                <!-- Logger Configurator -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h2>🛠️ ロガー設定パネル</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="config-tabs">
+                            <button class="tab-btn active" onclick="switchConfigPreset('standard')">標準構成</button>
+                            <button class="tab-btn" onclick="switchConfigPreset('async-heavy')">非同期ストレス</button>
+                            <button class="tab-btn" onclick="switchConfigPreset('hierarchy')">階層伝播</button>
+                        </div>
+
+                        <div id="logger-config-form">
+                            <!-- Dynamically loaded logging config settings will render here -->
+                            <p class="loading-text">設定を読み込み中...</p>
+                        </div>
+
+                        <button id="apply-config-btn" class="primary-btn">
+                            <span>⚡ 設定を適用してロガーを初期化</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Simulator Controls -->
+                <div class="glass-card">
+                    <div class="card-header">
+                        <h2>🚀 スレッド並行シミュレーター</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="simulator-form" onsubmit="event.preventDefault();">
+                            <div class="form-group">
+                                <label for="sim-threads">並行実行スレッド数:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="sim-threads" min="1" max="8" value="3">
+                                    <span class="slider-val" id="sim-threads-val">3</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sim-logs">1スレッドあたりのエミット数:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="sim-logs" min="10" max="200" value="50">
+                                    <span class="slider-val" id="sim-logs-val">50</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sim-interval">エミット間隔 (秒):</label>
+                                <div class="slider-container">
+                                    <input type="range" id="sim-interval" min="0.01" max="0.5" step="0.01" value="0.05">
+                                    <span class="slider-val" id="sim-interval-val">0.05秒</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="sim-logger">エミット対象ロガー:</label>
+                                <select id="sim-logger">
+                                    <option value="root">root (最上位)</option>
+                                    <option value="app">app (アプリケーション)</option>
+                                    <option value="app.service" selected>app.service (サービス層)</option>
+                                    <option value="app.db">app.db (DB層)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>ログレベル (ランダム選択):</label>
+                                <div class="checkbox-grid">
+                                    <label><input type="checkbox" name="sim-level" value="DEBUG" checked> DEBUG</label>
+                                    <label><input type="checkbox" name="sim-level" value="INFO" checked> INFO</label>
+                                    <label><input type="checkbox" name="sim-level" value="WARN" checked> WARN</label>
+                                    <label><input type="checkbox" name="sim-level" value="ERROR" checked> ERROR</label>
+                                    <label><input type="checkbox" name="sim-level" value="FATAL" checked> FATAL</label>
+                                </div>
+                            </div>
+
+                            <div class="btn-group">
+                                <button type="button" id="start-sim-btn" class="primary-btn pulse-glow">シミュレーション開始</button>
+                                <button type="button" id="stop-sim-btn" class="danger-btn" disabled>停止</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- COLUMN 2: REAL-TIME DYNAMIC FLOW VISUALIZER -->
+            <main class="visualizer-column">
+                <div class="glass-card visualizer-card">
+                    <div class="card-header">
+                        <h2>🧬 ロギング・パイプライン内部フロー可視化</h2>
+                        <span class="badge">リアルタイム</span>
+                    </div>
+                    <div class="card-body visualizer-body">
+                        <!-- Dynamic SVG connector overlay -->
+                        <svg id="svg-connectors"></svg>
+
+                        <div class="topology-grid">
+                            <!-- Logger Lanes -->
+                            <div class="topology-lane" id="lane-loggers">
+                                <h3>🔀 ロガー階層</h3>
+                                <div class="node-list" id="nodes-loggers"></div>
+                            </div>
+
+                            <!-- Destination Lanes -->
+                            <div class="topology-lane" id="lane-destinations">
+                                <h3>📦 宛先 (Destination)</h3>
+                                <div class="node-list" id="nodes-destinations"></div>
+                            </div>
+
+                            <!-- Sink Lanes -->
+                            <div class="topology-lane" id="lane-sinks">
+                                <h3>💾 出力先 (Sink)</h3>
+                                <div class="node-list" id="nodes-sinks"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIVE CONSOLE TERMINALS -->
+                <div class="terminals-container">
+                    <div class="terminal-card">
+                        <div class="terminal-header">
+                            <div class="terminal-dots">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <span class="terminal-title">🖥️ Console Output (STDOUT)</span>
+                            <button class="clear-btn" onclick="clearTerminal('console')">クリア</button>
+                        </div>
+                        <div class="terminal-body" id="term-console">
+                            <div class="terminal-line system-msg">Stdout terminal initialized. Waiting for console sink writes...</div>
+                        </div>
+                    </div>
+
+                    <div class="terminal-card">
+                        <div class="terminal-header">
+                            <div class="terminal-dots">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <span class="terminal-title">💾 Persistent Logs File (app.log)</span>
+                            <button class="clear-btn" onclick="clearTerminal('file')">クリア</button>
+                        </div>
+                        <div class="terminal-body" id="term-file">
+                            <div class="terminal-line system-msg">File stream initialized. Logs appended in disk append-only mode...</div>
+                        </div>
+                    </div>
+
+                    <div class="terminal-card terminal-danger">
+                        <div class="terminal-header">
+                            <div class="terminal-dots">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <span class="terminal-title">⚠️ Diagnostics & Failures (STDERR)</span>
+                            <button class="clear-btn" onclick="clearTerminal('stderr')">クリア</button>
+                        </div>
+                        <div class="terminal-body" id="term-stderr">
+                            <div class="terminal-line error-msg">Stderr logging active. Monitoring queue backpressures and sink errors...</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Script assets -->
+    <script src="app.js"></script>
+</body>
+</html>
