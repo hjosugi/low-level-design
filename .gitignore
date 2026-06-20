@@ -1,0 +1,19 @@
+# Build outputs
+bin/
+target/
+out/
+build/
+*.class
+
+# Local dependency drops
+lib/*.jar
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+*.tmp

@@ -7,7 +7,7 @@
 ## 📂 ディレクトリ構成
 
 ```
-/home/hsugi/workspace/logging-service/
+low-level-design/logging-service/
   ├── src/
   │   └── main/
   │       └── java/
